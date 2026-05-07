@@ -30,7 +30,17 @@ use crate::syscall::syscall::create_syscall;
 use crate::user_ns::UserNamespaceConfig;
 use crate::{tty, utils};
 
-const NAMESPACE_TYPES: &[&str] = &["ipc", "uts", "net", "pid", "mnt", "cgroup"];
+// "user" must be first: in rootless containers, joining the init's user
+// namespace is what gives the intermediate process CAP_SYS_ADMIN over the
+// container's other namespaces. Without it, setns(CLONE_NEWPID) into a
+// rootless container with its own PID namespace fails with EPERM.
+//
+// The actual ordering of namespace joins is decided in
+// container_intermediate_process: it picks user out of this list by name
+// and processes it before pid. The order in this slice does not change
+// runtime behaviour, but having "user" first reflects the dependency.
+const NAMESPACE_TYPES: &[&str] =
+    &["user", "ipc", "uts", "net", "pid", "mnt", "cgroup"];
 const TENANT_NOTIFY: &str = "tenant-notify-";
 const TENANT_TTY: &str = "tenant-tty-";
 
